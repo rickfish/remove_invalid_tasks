@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Template
+parameters:
+- name: APPLICATION_NAME
+  value: conductor-remove-invalid-tasks
+metadata:
+  name: ${APPLICATION_NAME}
+objects:
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    annotations: {}
+    labels:
+      app: ${APPLICATION_NAME}
+    name: ${APPLICATION_NAME}
+  spec:
+    completionDeadlineSeconds: 1800
+    output:
+      to:
+        kind: ImageStreamTag
+        name: ${APPLICATION_NAME}:latest
+    postCommit: {}
+    resources: {}
+    source:
+      type: Binary
+      binary: {}
+    strategy:
+      sourceStrategy:
+        from:
+          kind: ImageStreamTag
+          namespace: ocp-image
+          name: 'openjdk18-openshift:1.8-25_210126.580'
+      type: Source
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      app:  ${APPLICATION_NAME}
+    name:  ${APPLICATION_NAME}

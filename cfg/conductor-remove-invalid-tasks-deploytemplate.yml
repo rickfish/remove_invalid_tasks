@@ -1,0 +1,240 @@
+apiVersion: v1 
+kind: Template
+parameters:
+- name: PROJECT_NAME
+- name: APPLICATION_NAME
+- name: TAG
+- name: PORT
+- name: which_app
+- name: task_type
+- name: env
+- name: db_url
+- name: db_user
+- name: db_password
+- name: conductor_url
+- name: conductor_userid
+- name: conductor_password
+- name: output_directory
+- name: log_each_record
+- name: log_only_purged
+- name: actually_purge
+- name: row_limit
+- name: row_offset
+- name: sample_id_count
+- name: medrec_terminate_before
+- name: caregap_terminate_before
+- name: codinggap_terminate_before
+- name: corr_id_file_name
+- name: starting_date
+- name: terminate_if_running
+- name: workflows_to_terminate_if_running
+- name: process_orphaned_tasks
+- name: include_subworkflows
+- name: email_smtp_host
+- name: email_address_from
+- name: email_address_replyto
+- name: email_address_to
+- name: RESOURCE_REQUEST_CPU
+- name: RESOURCE_REQUEST_MEMORY
+- name: RESOURCE_LIMIT_CPU
+- name: RESOURCE_LIMIT_MEMORY
+
+metadata:
+  name: ${APPLICATION_NAME}
+  labels:
+    app: ${APPLICATION_NAME}
+objects:
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: ${PROJECT_NAME}-app-output-claim
+    namespace: ${PROJECT_NAME}
+    annotations:
+      volume.beta.kubernetes.io/storage-class: ocs-storagecluster-cephfs
+  spec:
+    accessModes:
+      - ReadWriteMany
+    resources:
+      requests:
+        storage: 1000Mi
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: ${APPLICATION_NAME}
+    name: ${APPLICATION_NAME}
+  spec:
+    replicas: 1
+    test: false
+    selector:
+      app: ${APPLICATION_NAME}
+      deploymentconfig: ${APPLICATION_NAME}
+    strategy:
+      type: Rolling
+      resources: {}
+      rollingParams:
+        updatePeriodSeconds: 1
+        intervalSeconds: 1
+        timeoutSeconds: 500
+    template:
+      metadata:
+        labels:
+          app: ${APPLICATION_NAME}
+          deploymentconfig: ${APPLICATION_NAME}
+          splunk_filter_type: filter
+      spec:
+        volumes:
+        - name: app-output-volume
+          persistentVolumeClaim:
+            claimName: ${PROJECT_NAME}-app-output-claim
+        containers:
+        - env:
+          - name: APPLICATION_NAME
+            value: ${APPLICATION_NAME}
+          - name: TAG
+            value: ${TAG}
+          - name: PORT
+            value: ${PORT}
+          - name: which_app
+            value: ${which_app}
+          - name: task_type
+            value: ${task_type}
+          - name: env
+            value: ${env}
+          - name: db_url
+            value: ${db_url}
+          - name: db_user
+            value: ${db_user}
+          - name: db_password
+            value: ${db_password}
+          - name: conductor_url
+            value: ${conductor_url}
+          - name: conductor_userid
+            value: ${conductor_userid}
+          - name: conductor_password
+            value: ${conductor_password}
+          - name: output_directory
+            value: ${output_directory}
+          - name: log_each_record
+            value: ${log_each_record}
+          - name: log_only_purged
+            value: ${log_only_purged}
+          - name: actually_purge            
+            value: ${actually_purge}
+          - name: row_limit            
+            value: ${row_limit}
+          - name: row_offset            
+            value: ${row_offset}
+          - name: sample_id_count            
+            value: ${sample_id_count}
+          - name: medrec_terminate_before
+            value: ${medrec_terminate_before}
+          - name: caregap_terminate_before
+            value: ${caregap_terminate_before}
+          - name: codinggap_terminate_before
+            value: ${codinggap_terminate_before}
+          - name: corr_id_file_name
+            value: ${corr_id_file_name}
+          - name: starting_date
+            value: ${starting_date}
+          - name: terminate_if_running
+            value: ${terminate_if_running}
+          - name: workflows_to_terminate_if_running
+            value: ${workflows_to_terminate_if_running}
+          - name: process_orphaned_tasks
+            value: ${process_orphaned_tasks}
+          - name: include_subworkflows
+            value: ${include_subworkflows}
+          - name: email_smtp_host
+            value: ${email_smtp_host}
+          - name: email_address_from
+            value: ${email_address_from}
+          - name: email_address_replyto
+            value: ${email_address_replyto}
+          - name: email_address_to
+            value: ${email_address_to}
+          ports:
+          - containerPort: 8083
+            protocol: TCP
+          - containerPort: 8080
+            protocol: TCP
+          - containerPort: 8443
+            protocol: TCP
+          - containerPort: 8778
+            protocol: TCP
+          image: docker-registry.default.svc:5000/etd-image/${APPLICATION_NAME}
+          name: ${APPLICATION_NAME}
+          livenessProbe:
+            exec:
+              command:
+                - cat 
+                - /etc/appOutput/health.txt
+            failureThreshold: 3
+            initialDelaySeconds: 100
+            periodSeconds: 3
+            successThreshold: 1
+            timeoutSeconds: 30
+          readinessProbe:
+            exec:
+              command:
+                - cat 
+                - /etc/appOutput/health.txt
+            failureThreshold: 3
+            initialDelaySeconds: 100
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 30
+          resources:
+            requests:
+              cpu: ${RESOURCE_REQUEST_CPU}
+              memory: ${RESOURCE_REQUEST_MEMORY}
+            limits:
+              cpu: ${RESOURCE_LIMIT_CPU}
+              memory: ${RESOURCE_LIMIT_MEMORY}
+          volumeMounts:
+          - name: app-output-volume
+            readOnly: false
+            mountPath: /etc/appOutput
+    triggers:
+    - imageChangeParams:
+        auto: false
+        containerNames:
+         - ${APPLICATION_NAME}
+        from:
+          kind: ImageStreamTag
+          namespace: etd-image
+          name: ${APPLICATION_NAME}:${TAG}
+      type: ImageChange
+  status: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${APPLICATION_NAME}
+    name: ${APPLICATION_NAME}
+    namespace: ${PROJECT_NAME}
+  spec:
+    ports:
+    - name: 8083-tcp
+      port: 8083
+      protocol: TCP
+      targetPort: 8083
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    - name: 8443-tcp
+      port: 8443
+      protocol: TCP
+      targetPort: 8443
+    - name: 8778-tcp
+      port: 8778
+      protocol: TCP
+      targetPort: 8778
+    selector:
+      app: ${APPLICATION_NAME}
+      deploymentconfig: ${APPLICATION_NAME}
+    type: ClusterIP
+    sessionAffinity: None
+  status:
+    loadBalancer: {}

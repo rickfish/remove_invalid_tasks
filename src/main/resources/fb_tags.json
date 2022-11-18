@@ -1,0 +1,26 @@
+{
+	"enterprise" : [
+		"partyId",
+		"contractId",
+		"consumerId",
+		"memberId",
+		"providerId",
+		"claimId",
+		"agentId",
+		"agencyId",
+		"cipId",
+		"hccId",
+		"secRole",
+		"lob"
+	],
+	"domain" : [
+		"externalContractId",
+		"floridaBlueNumber",
+		"nationalProviderIdentifier",
+		"domainName",
+		"claimNumber",
+		"claimType",
+		"claimSourceSystem",
+		"sequenceClaimId"
+	]
+}

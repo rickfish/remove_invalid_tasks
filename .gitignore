@@ -1,0 +1,8 @@
+/bin/
+/build/
+.gradle
+/project/project/
+/project/target/
+.cache-main
+.cache-tests
+*.jar
